@@ -1,0 +1,198 @@
+:root {
+	--wopr-bg: #010101;
+	--wopr-phosphor: #00f87a;
+	--wopr-phosphor-dim: #00c864;
+	--wopr-amber: #f6d96f;
+	--wopr-scanline: rgba(255, 255, 255, 0.03);
+	--wopr-glow: 0 0 6px rgba(0, 248, 122, 0.7), 0 0 18px rgba(0, 248, 122, 0.3);
+	--wopr-glow-strong: 0 0 12px rgba(0, 248, 122, 0.9), 0 0 32px rgba(0, 248, 122, 0.5);
+	--wopr-font: Consolas, Monaco, 'Courier New', monospace;
+}
+
+.wopr-root {
+	position: relative;
+	color: var(--wopr-phosphor);
+	font-family: var(--wopr-font);
+	letter-spacing: 0.04em;
+	background: linear-gradient(var(--wopr-bg), #000);
+	padding: 16px 18px;
+	overflow: hidden;
+	isolation: isolate;
+	width: fit-content;
+	max-width: 100%;
+}
+
+/* Minimal padding when no header/footer */
+.wopr-root:not(:has(.wopr-header:not(:empty))):not(:has(.wopr-footer)) {
+	padding: 6px 8px;
+}
+
+.wopr-root::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background:
+		repeating-linear-gradient(
+			to bottom,
+			var(--wopr-scanline) 0px,
+			var(--wopr-scanline) 2px,
+			transparent 3px,
+			transparent 4px
+		),
+		radial-gradient(
+			circle at 50% 50%,
+			transparent 0%,
+			transparent 60%,
+			rgba(0, 0, 0, 0.15) 85%,
+			rgba(0, 0, 0, 0.4) 100%
+		);
+	mix-blend-mode: screen;
+}
+
+.wopr-header,
+.wopr-footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	text-shadow: var(--wopr-glow);
+	font-size: 14px;
+}
+
+.wopr-muted {
+	color: var(--wopr-phosphor-dim);
+	opacity: 0.85;
+}
+
+.wopr-grid {
+	display: grid;
+	grid-template-columns: minmax(auto, 2fr) minmax(0, 1fr);
+	gap: 20px;
+	align-items: start;
+	margin-top: 8px;
+}
+
+.wopr-grid:has(.wopr-side:empty) {
+	grid-template-columns: 1fr;
+}
+
+.wopr-main {
+	display: grid;
+	gap: 10px;
+}
+
+.wopr-title {
+	font-size: 13px;
+	color: var(--wopr-amber);
+	opacity: 0.9;
+	text-shadow: 0 0 8px rgba(246, 217, 111, 0.65);
+}
+
+.wopr-code {
+	font-size: clamp(28px, 7vw, 64px);
+	letter-spacing: 0.12em;
+	line-height: 1.15;
+	white-space: pre;
+	text-shadow: var(--wopr-glow-strong);
+	margin-right: -0.12em;
+}
+
+.wopr-code.wopr-blink {
+	animation: wopr-solved-blink 0.15s steps(2, end) 10;
+}
+
+@keyframes wopr-solved-blink {
+	0%,
+	100% {
+		opacity: 1;
+		text-shadow: var(--wopr-glow-strong);
+	}
+	50% {
+		opacity: 0.3;
+		text-shadow:
+			0 0 20px rgba(0, 248, 122, 1),
+			0 0 40px rgba(0, 248, 122, 0.8);
+	}
+}
+
+.wopr-cursor {
+	display: inline-block;
+	width: 0.55ch;
+	background: var(--wopr-phosphor);
+	margin-left: 0.1ch;
+	margin-right: -0.65ch;
+	animation: wopr-blink 0.9s steps(1, end) infinite;
+	box-shadow: var(--wopr-glow);
+}
+
+@keyframes wopr-blink {
+	0%,
+	55% {
+		opacity: 1;
+	}
+	56%,
+	100% {
+		opacity: 0;
+	}
+}
+
+.wopr-progress {
+	height: 10px;
+	background: rgba(0, 248, 122, 0.08);
+	border: 1px solid rgba(0, 248, 122, 0.35);
+	position: relative;
+	overflow: hidden;
+}
+.wopr-progress > .wopr-bar {
+	height: 100%;
+	width: 0%;
+	background: linear-gradient(to right, rgba(0, 248, 122, 0.8), rgba(0, 248, 122, 0.2));
+	box-shadow: 0 0 10px rgba(0, 248, 122, 0.6);
+	transition: width 120ms linear;
+}
+
+.wopr-side {
+	border-left: 1px solid rgba(0, 248, 122, 0.25);
+	padding-left: 18px;
+}
+.wopr-stream {
+	font-size: 12px;
+	opacity: 0.9;
+	line-height: 1.25;
+	height: 100%;
+	overflow: hidden;
+	mask-image: linear-gradient(to bottom, transparent, black 8%, black 92%, transparent);
+}
+.wopr-line {
+	white-space: nowrap;
+	text-shadow: var(--wopr-glow);
+	font-feature-settings: 'tnum' 1;
+}
+
+.wopr-overlay {
+	position: absolute;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.8);
+	display: grid;
+	place-items: center;
+	z-index: 5;
+}
+.wopr-btn {
+	border: 1px solid rgba(0, 248, 122, 0.6);
+	color: var(--wopr-phosphor);
+	background: rgba(0, 248, 122, 0.08);
+	padding: 12px 18px;
+	font-size: 15px;
+	cursor: pointer;
+	text-shadow: var(--wopr-glow);
+	box-shadow:
+		inset 0 0 12px rgba(0, 248, 122, 0.2),
+		0 0 12px rgba(0, 248, 122, 0.2);
+	transition:
+		transform 80ms ease,
+		background 120ms linear;
+}
+.wopr-btn:hover {
+	transform: translateY(-1px);
+	background: rgba(0, 248, 122, 0.12);
+}

@@ -6,7 +6,6 @@ tsconfig.json
 .vscode/
 .prettierrc
 *.html
-test3.html
 
 # Config files
 .gitignore
