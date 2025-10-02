@@ -18,11 +18,7 @@ Retro, WarGames-inspired decryption/countdown counter with a CRT feel. Pure ESM,
 
 ## 🎮 Demo
 
-Check out the live demos:
-
-- **[Interactive Playground](https://nomadicdaddy.github.io/wopr-decryptor/demo)** - Configure all options
-- **[Full Example](https://nomadicdaddy.github.io/wopr-decryptor/example)** - Complete feature showcase
-- **[Minimal](https://nomadicdaddy.github.io/wopr-decryptor/bare)** - Clean counter only
+- **[Live Demos](https://nomadicdaddy.github.io/wopr-decryptor)**
 
 ## 📦 Install
 
