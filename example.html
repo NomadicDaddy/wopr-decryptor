@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta content="width=device-width, initial-scale=1.0" name="viewport" />
+		<title>WOPR Decryptor - Preview</title>
+		<link href="./dist/styles.css" rel="stylesheet" />
+		<style>
+			body {
+				margin: 0;
+				padding: 0;
+				background: #000;
+				font-family: 'Courier New', monospace;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				height: 100vh;
+				overflow: hidden;
+			}
+			#app {
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				width: 90vw;
+				max-width: 1400px;
+			}
+			#app .wopr-root {
+				width: 100%;
+				max-width: none;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="app"></div>
+
+		<script type="module">
+			import { WOPRDecryptor } from './dist/index.js';
+
+			const container = document.getElementById('app');
+
+			const wopr = new WOPRDecryptor({
+				container: container,
+				codes: ['CPE-1704-TKS', 'DEFCON-1', 'NORAD-ALPHA-7'],
+				direction: 'random', // 'ltr', 'rtl', or 'random'
+				cycles: 0, // 0 = infinite loop through codes
+				timing: {
+					durationMs: 10000,
+					tickInterval: 70,
+				},
+				audio: {
+					enabled: false,
+					volume: 0.12,
+				},
+				ui: {
+					showOverlay: true,
+					overlayText: 'INITIATE DECRYPTION',
+					blinkOnSolved: true,
+				},
+			});
+
+			// Listen to events (auto-looping handled by cycles: 0)
+			wopr.on('complete', (code) => {
+				console.log('✓ Code decrypted:', code);
+			});
+
+			wopr.on('lock', (index, char) => {
+				console.log(`Character locked at position ${index}: ${char}`);
+			});
+
+			// Keyboard controls
+			window.addEventListener('keydown', (e) => {
+				if (e.key === 'r' || e.key === 'R') {
+					wopr.reset();
+					wopr.start();
+				}
+				if (e.key === 'n' || e.key === 'N') {
+					wopr.next();
+					wopr.start();
+				}
+				if (e.key === ' ') {
+					e.preventDefault();
+					wopr.start();
+				}
+			});
+		</script>
+	</body>
+</html>

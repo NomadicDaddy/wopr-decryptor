@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta content="width=device-width, initial-scale=1.0" name="viewport" />
+		<title>WOPR Decryptor - Demo Gallery</title>
+		<style>
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+
+			body {
+				background: #000;
+				color: #00f87a;
+				font-family: 'Courier New', monospace;
+				min-height: 100vh;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				padding: 20px;
+				background: radial-gradient(ellipse at center, #001a0f 0%, #000 70%);
+			}
+
+			.container {
+				max-width: 800px;
+				width: 100%;
+			}
+
+			h1 {
+				font-size: clamp(32px, 8vw, 64px);
+				text-align: center;
+				margin-bottom: 10px;
+				text-shadow:
+					0 0 10px rgba(0, 248, 122, 0.8),
+					0 0 20px rgba(0, 248, 122, 0.5);
+				animation: glow 2s ease-in-out infinite alternate;
+			}
+
+			@keyframes glow {
+				from {
+					text-shadow:
+						0 0 10px rgba(0, 248, 122, 0.8),
+						0 0 20px rgba(0, 248, 122, 0.5);
+				}
+				to {
+					text-shadow:
+						0 0 15px rgba(0, 248, 122, 1),
+						0 0 30px rgba(0, 248, 122, 0.7);
+				}
+			}
+
+			.subtitle {
+				text-align: center;
+				color: #f6d96f;
+				font-size: 14px;
+				margin-bottom: 40px;
+				opacity: 0.9;
+			}
+
+			.demo-grid {
+				display: grid;
+				gap: 20px;
+				margin-bottom: 40px;
+			}
+
+			.demo-card {
+				border: 1px solid rgba(0, 248, 122, 0.4);
+				background: rgba(0, 248, 122, 0.05);
+				padding: 24px;
+				text-decoration: none;
+				color: inherit;
+				transition: all 0.3s ease;
+				position: relative;
+				overflow: hidden;
+			}
+
+			.demo-card::before {
+				content: '';
+				position: absolute;
+				top: 0;
+				left: -100%;
+				width: 100%;
+				height: 100%;
+				background: linear-gradient(90deg, transparent, rgba(0, 248, 122, 0.1), transparent);
+				transition: left 0.5s;
+			}
+
+			.demo-card:hover::before {
+				left: 100%;
+			}
+
+			.demo-card:hover {
+				border-color: rgba(0, 248, 122, 0.8);
+				background: rgba(0, 248, 122, 0.1);
+				box-shadow:
+					0 0 20px rgba(0, 248, 122, 0.3),
+					inset 0 0 20px rgba(0, 248, 122, 0.1);
+				transform: translateY(-2px);
+			}
+
+			.demo-title {
+				font-size: 24px;
+				margin-bottom: 8px;
+				display: flex;
+				align-items: center;
+				gap: 10px;
+			}
+
+			.demo-icon {
+				font-size: 28px;
+			}
+
+			.demo-desc {
+				color: rgba(0, 248, 122, 0.8);
+				font-size: 14px;
+				line-height: 1.6;
+			}
+
+			.demo-features {
+				margin-top: 12px;
+				padding-top: 12px;
+				border-top: 1px solid rgba(0, 248, 122, 0.2);
+				font-size: 12px;
+				color: rgba(0, 248, 122, 0.6);
+			}
+
+			.footer {
+				text-align: center;
+				padding: 20px;
+				border-top: 1px solid rgba(0, 248, 122, 0.2);
+			}
+
+			.footer-links {
+				display: flex;
+				gap: 20px;
+				justify-content: center;
+				margin-bottom: 10px;
+			}
+
+			.footer-link {
+				color: #f6d96f;
+				text-decoration: none;
+				font-size: 14px;
+				transition: all 0.3s;
+			}
+
+			.footer-link:hover {
+				color: #00f87a;
+				text-shadow: 0 0 8px rgba(0, 248, 122, 0.6);
+			}
+
+			.footer-text {
+				font-size: 12px;
+				color: rgba(0, 248, 122, 0.5);
+			}
+
+			.demo-counter-wrapper {
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				margin: 20px 0;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="scanlines"></div>
+
+		<div class="container">
+			<h1>WOPR DECRYPTOR</h1>
+			<p class="subtitle">DEMO GALLERY // SELECT SIMULATION MODE</p>
+
+			<div class="demo-counter-wrapper">
+				<div id="app"></div>
+			</div>
+
+			<script type="module">
+				import { WOPRDecryptor } from './dist/index.js';
+
+				const wopr = new WOPRDecryptor({
+					container: document.getElementById('app'),
+					codes: ['CPE-1704-TKS', 'DEFCON-1', 'NORAD-ALPHA-7'],
+					charset: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+					direction: 'random',
+					cycles: 1,
+					timing: {
+						durationMs: 10000,
+						tickInterval: 70,
+					},
+					audio: {
+						enabled: false,
+						volume: 0.12,
+						tickFreq: 180,
+						lockFreqStart: 900,
+						lockFreqStep: 12,
+					},
+					probability: {
+						enabled: false,
+						base: 2.3,
+						max: 99.9,
+					},
+					stream: {
+						enabled: false,
+						lines: 20,
+						width: 22,
+					},
+					ui: {
+						showHeader: false,
+						showFooter: false,
+						showProgress: false,
+						showOverlay: false,
+						blinkOnSolved: true,
+						blinkDuration: 3,
+						showCycles: false,
+						title: '',
+					},
+				});
+
+				// Start immediately
+				wopr.start();
+
+				// Keyboard controls
+				window.addEventListener('keydown', (e) => {
+					if (e.key === 'r' || e.key === 'R') {
+						wopr.reset();
+						wopr.start();
+					}
+					if (e.key === 'n' || e.key === 'N') {
+						wopr.next();
+						wopr.start();
+					}
+					if (e.key === ' ') {
+						e.preventDefault();
+						if (wopr.running) {
+							wopr.stop();
+						} else {
+							wopr.start();
+						}
+					}
+				});
+			</script>
+		</div>
+
+		<div class="demo-grid">
+			<a class="demo-card" href="bare.html">
+				<div class="demo-title">
+					<span class="demo-icon">⚡</span>
+					<span>BARE MINIMUM</span>
+				</div>
+				<div class="demo-desc">
+					Pure counter, no chrome. Just the essential decryption sequence with centered layout.
+				</div>
+				<div class="demo-features">✓ No header/footer ✓ No stream ✓ No progress bar ✓ Auto-start</div>
+			</a>
+
+			<a class="demo-card" href="example.html">
+				<div class="demo-title">
+					<span class="demo-icon">📟</span>
+					<span>FULL EXPERIENCE</span>
+				</div>
+				<div class="demo-desc">
+					Complete WOPR interface with all UI elements. Includes header, footer, stream, and overlay.
+				</div>
+				<div class="demo-features">
+					✓ Full UI ✓ Intercept stream ✓ Progress bar ✓ Blink effect ✓ Infinite loop
+				</div>
+			</a>
+
+			<a class="demo-card" href="demo.html">
+				<div class="demo-title">
+					<span class="demo-icon">⚙️</span>
+					<span>INTERACTIVE PLAYGROUND</span>
+				</div>
+				<div class="demo-desc">
+					Comprehensive configuration playground. Tweak all settings in real-time and copy config to
+					clipboard.
+				</div>
+				<div class="demo-features">
+					✓ All options ✓ Live preview ✓ Copy config ✓ DateTime scheduling ✓ Cycle control
+				</div>
+			</a>
+
+			<div class="footer">
+				<div class="footer-links">
+					<a class="footer-link" href="https://github.com/NomadicDaddy/wopr-decryptor" target="_blank"
+						>GitHub</a
+					>
+					<a class="footer-link" href="https://www.npmjs.com/package/wopr-decryptor" target="_blank">NPM</a>
+					<a class="footer-link" href="README.md" target="_blank">Documentation</a>
+				</div>
+				<p class="footer-text">© 1983 WOPR SIMULATION // NORAD PROCESSOR GRID</p>
+			</div>
+		</div>
+	</body>
+</html>

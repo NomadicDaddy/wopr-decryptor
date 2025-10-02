@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta content="width=device-width, initial-scale=1.0" name="viewport" />
+		<title>WOPR Decryptor - Interactive Demo</title>
+		<link href="./dist/styles.css" rel="stylesheet" />
+		<style>
+			* {
+				box-sizing: border-box;
+			}
+			body {
+				margin: 0;
+				padding: 0;
+				background: #000;
+				font-family: 'Courier New', monospace;
+				color: #00f87a;
+			}
+			h1 {
+				text-align: center;
+				color: #00f87a;
+				text-shadow: 0 0 10px rgba(0, 248, 122, 0.5);
+				margin: 20px 0;
+				font-size: 24px;
+			}
+			.layout {
+				display: grid;
+				grid-template-columns: 350px 1fr;
+				gap: 20px;
+				padding: 20px;
+				max-width: 1600px;
+				margin: 0 auto;
+				height: calc(100vh - 100px);
+			}
+			.controls-panel {
+				border: 1px solid #00f87a;
+				padding: 15px;
+				background: rgba(0, 248, 122, 0.05);
+				overflow-y: auto;
+				max-height: 100%;
+			}
+			.controls-panel h2 {
+				margin: 0 0 15px 0;
+				font-size: 16px;
+				color: #f6d96f;
+				border-bottom: 1px solid #00f87a;
+				padding-bottom: 5px;
+			}
+			.form-group {
+				margin-bottom: 15px;
+			}
+			.form-group label {
+				display: block;
+				margin-bottom: 5px;
+				font-size: 12px;
+				color: #f6d96f;
+			}
+			.form-group input[type='text'],
+			.form-group input[type='number'],
+			.form-group select,
+			.form-group textarea {
+				width: 100%;
+				background: #000;
+				border: 1px solid #00f87a;
+				color: #00f87a;
+				padding: 8px;
+				font-family: 'Courier New', monospace;
+				font-size: 12px;
+			}
+			.form-group textarea {
+				resize: vertical;
+				min-height: 60px;
+			}
+			.form-group input[type='checkbox'] {
+				margin-right: 8px;
+			}
+			.form-group input[type='range'] {
+				width: calc(100% - 50px);
+				accent-color: #00f87a;
+			}
+			.range-value {
+				display: inline-block;
+				width: 40px;
+				text-align: right;
+				margin-left: 10px;
+				color: #00f87a;
+			}
+			button {
+				background: transparent;
+				border: 1px solid #00f87a;
+				color: #00f87a;
+				padding: 10px 15px;
+				font-family: 'Courier New', monospace;
+				cursor: pointer;
+				font-size: 12px;
+				width: 100%;
+				margin-bottom: 10px;
+			}
+			button:hover {
+				background: rgba(0, 248, 122, 0.2);
+				box-shadow: 0 0 10px rgba(0, 248, 122, 0.5);
+			}
+			button.copy {
+				background: rgba(246, 217, 111, 0.1);
+				border-color: #f6d96f;
+				color: #f6d96f;
+			}
+			button.copy:hover {
+				background: rgba(246, 217, 111, 0.2);
+				box-shadow: 0 0 10px rgba(246, 217, 111, 0.5);
+			}
+			button.copied {
+				background: rgba(0, 248, 122, 0.3);
+			}
+			.preview-container {
+				border: 1px solid #00f87a;
+				padding: 10px;
+				background: rgba(0, 248, 122, 0.05);
+				position: relative;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
+			#app {
+				display: flex;
+				justify-content: center;
+				align-items: center;
+			}
+			.section {
+				margin-bottom: 20px;
+				padding-bottom: 15px;
+				border-bottom: 1px solid rgba(0, 248, 122, 0.3);
+			}
+			.section:last-child {
+				border-bottom: none;
+			}
+			.button-group {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 10px;
+			}
+			@media (max-width: 1024px) {
+				.layout {
+					grid-template-columns: 1fr;
+					height: auto;
+				}
+				.controls-panel {
+					max-height: none;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<h1>WOPR DECRYPTOR - INTERACTIVE DEMO</h1>
+		<div class="layout">
+			<div class="controls-panel">
+				<h2>⚙ CONFIGURATION</h2>
+
+				<div class="section">
+					<div class="form-group">
+						<label>CODES (one per line)</label>
+						<textarea id="codes">
+CPE-1704-TKS
+DEFCON-1
+NORAD-ALPHA-7</textarea
+						>
+					</div>
+
+					<div class="form-group">
+						<label>CHARACTER SET</label>
+						<select id="charsetSelect">
+							<option value="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789">ALPHANUMERIC</option>
+							<option value="▀▄▌▐█▓▒░╔╗╚╝║═╬╣╠╦╩◆◇○●□■△▽01">MATRIX GLYPHS</option>
+						</select>
+					</div>
+
+					<div class="form-group">
+						<label>DIRECTION</label>
+						<select id="direction">
+							<option value="ltr">Left to Right (LTR)</option>
+							<option value="rtl">Right to Left (RTL)</option>
+							<option selected value="random">Random</option>
+						</select>
+					</div>
+
+					<div class="form-group">
+						<label>CYCLES (0 = infinite)</label>
+						<input id="cycles" max="10" min="0" step="1" type="range" value="0" />
+						<span class="range-value" id="cyclesValue">∞</span>
+					</div>
+				</div>
+
+				<h2>⏱ TIMING</h2>
+				<div class="section">
+					<div class="form-group">
+						<label>DURATION (ms)</label>
+						<input id="durationMs" max="30000" min="1000" step="1000" type="range" value="10000" />
+						<span class="range-value" id="durationValue">10000</span>
+					</div>
+
+					<div class="form-group">
+						<label>TICK INTERVAL (ms)</label>
+						<input id="tickInterval" max="200" min="20" step="10" type="range" value="70" />
+						<span class="range-value" id="tickValue">70</span>
+					</div>
+
+					<div class="form-group">
+						<label>START DATE/TIME (optional)</label>
+						<input id="startDateTime" placeholder="YYYY-MM-DD HH:mm:ss" type="text" value="" />
+					</div>
+
+					<div class="form-group">
+						<label>END DATE/TIME (optional)</label>
+						<input id="endDateTime" placeholder="YYYY-MM-DD HH:mm:ss" type="text" value="" />
+					</div>
+				</div>
+
+				<h2>🔊 AUDIO</h2>
+				<div class="section">
+					<div class="form-group">
+						<label>
+							<input id="audioEnabled" checked type="checkbox" />
+							ENABLED
+						</label>
+					</div>
+
+					<div class="form-group">
+						<label>VOLUME</label>
+						<input id="audioVolume" max="1" min="0" step="0.01" type="range" value="0.12" />
+						<span class="range-value" id="volumeValue">0.12</span>
+					</div>
+
+					<div class="form-group">
+						<label>TICK FREQUENCY (Hz)</label>
+						<input id="tickFreq" max="500" min="50" step="10" type="range" value="180" />
+						<span class="range-value" id="tickFreqValue">180</span>
+					</div>
+
+					<div class="form-group">
+						<label>LOCK FREQUENCY START (Hz)</label>
+						<input id="lockFreqStart" max="2000" min="200" step="50" type="range" value="900" />
+						<span class="range-value" id="lockFreqStartValue">900</span>
+					</div>
+
+					<div class="form-group">
+						<label>LOCK FREQUENCY STEP (Hz)</label>
+						<input id="lockFreqStep" max="50" min="1" step="1" type="range" value="12" />
+						<span class="range-value" id="lockFreqStepValue">12</span>
+					</div>
+				</div>
+
+				<h2>🎨 UI</h2>
+				<div class="section">
+					<div class="form-group">
+						<label>
+							<input id="showHeader" checked type="checkbox" />
+							SHOW HEADER
+						</label>
+					</div>
+
+					<div class="form-group">
+						<label>
+							<input id="showFooter" checked type="checkbox" />
+							SHOW FOOTER
+						</label>
+					</div>
+
+					<div class="form-group">
+						<label>
+							<input id="showProgress" checked type="checkbox" />
+							SHOW PROGRESS BAR
+						</label>
+					</div>
+
+					<div class="form-group">
+						<label>
+							<input id="showOverlay" type="checkbox" />
+							SHOW OVERLAY
+						</label>
+					</div>
+
+					<div class="form-group">
+						<label>
+							<input id="blinkOnSolved" checked type="checkbox" />
+							BLINK ON SOLVED
+						</label>
+					</div>
+
+					<div class="form-group">
+						<label>BLINK DURATION (sec, 0 = forever)</label>
+						<input id="blinkDuration" max="10" min="0" step="0.5" type="range" value="3" />
+						<span class="range-value" id="blinkDurationValue">3</span>
+					</div>
+
+					<div class="form-group">
+						<label>
+							<input id="showCycles" checked type="checkbox" />
+							SHOW CYCLES COUNTER
+						</label>
+					</div>
+
+					<div class="form-group">
+						<label>TITLE</label>
+						<input id="title" type="text" value="TARGET: LAUNCH CODES" />
+					</div>
+				</div>
+
+				<h2>📊 PROBABILITY</h2>
+				<div class="section">
+					<div class="form-group">
+						<label>
+							<input id="probEnabled" checked type="checkbox" />
+							ENABLED
+						</label>
+					</div>
+
+					<div class="form-group">
+						<label>BASE %</label>
+						<input id="probBase" max="50" min="0" step="0.1" type="range" value="2.3" />
+						<span class="range-value" id="probBaseValue">2.3</span>
+					</div>
+
+					<div class="form-group">
+						<label>MAX %</label>
+						<input id="probMax" max="100" min="50" step="0.1" type="range" value="99.9" />
+						<span class="range-value" id="probMaxValue">99.9</span>
+					</div>
+				</div>
+
+				<h2>📡 STREAM</h2>
+				<div class="section">
+					<div class="form-group">
+						<label>
+							<input id="streamEnabled" checked type="checkbox" />
+							ENABLED
+						</label>
+					</div>
+
+					<div class="form-group">
+						<label>LINES</label>
+						<input id="streamLines" max="30" min="5" step="1" type="range" value="20" />
+						<span class="range-value" id="streamLinesValue">20</span>
+					</div>
+
+					<div class="form-group">
+						<label>WIDTH</label>
+						<input id="streamWidth" max="40" min="10" step="1" type="range" value="22" />
+						<span class="range-value" id="streamWidthValue">22</span>
+					</div>
+				</div>
+
+				<h2>🎮 ACTIONS</h2>
+				<div class="button-group">
+					<button onclick="applyConfig()">APPLY</button>
+					<button onclick="resetConfig()">RESET</button>
+					<button onclick="startDemo()">START</button>
+					<button onclick="stopDemo()">STOP</button>
+				</div>
+				<button class="copy" onclick="copyConfig(event)">📋 COPY CONFIG TO CLIPBOARD</button>
+			</div>
+
+			<div class="preview-container">
+				<div id="app"></div>
+			</div>
+		</div>
+
+		<script type="module">
+			import { WOPRDecryptor } from './dist/index.js';
+
+			let wopr = null;
+
+			function getConfig() {
+				const codes = document
+					.getElementById('codes')
+					.value.split('\n')
+					.filter((c) => c.trim());
+
+				const startDateTime = document.getElementById('startDateTime').value.trim();
+				const endDateTime = document.getElementById('endDateTime').value.trim();
+
+				const timing = {
+					durationMs: parseInt(document.getElementById('durationMs').value),
+					tickInterval: parseInt(document.getElementById('tickInterval').value),
+				};
+
+				if (startDateTime) timing.startDateTime = startDateTime;
+				if (endDateTime) timing.endDateTime = endDateTime;
+
+				return {
+					codes: codes,
+					charset: document.getElementById('charsetSelect').value,
+					direction: document.getElementById('direction').value,
+					cycles: parseInt(document.getElementById('cycles').value),
+					timing: timing,
+					audio: {
+						enabled: document.getElementById('audioEnabled').checked,
+						volume: parseFloat(document.getElementById('audioVolume').value),
+						tickFreq: parseInt(document.getElementById('tickFreq').value),
+						lockFreqStart: parseInt(document.getElementById('lockFreqStart').value),
+						lockFreqStep: parseInt(document.getElementById('lockFreqStep').value),
+					},
+					probability: {
+						enabled: document.getElementById('probEnabled').checked,
+						base: parseFloat(document.getElementById('probBase').value),
+						max: parseFloat(document.getElementById('probMax').value),
+					},
+					stream: {
+						enabled: document.getElementById('streamEnabled').checked,
+						lines: parseInt(document.getElementById('streamLines').value),
+						width: parseInt(document.getElementById('streamWidth').value),
+					},
+					ui: {
+						showHeader: document.getElementById('showHeader').checked,
+						showFooter: document.getElementById('showFooter').checked,
+						showProgress: document.getElementById('showProgress').checked,
+						showOverlay: document.getElementById('showOverlay').checked,
+						blinkOnSolved: document.getElementById('blinkOnSolved').checked,
+						blinkDuration: parseFloat(document.getElementById('blinkDuration').value),
+						showCycles: document.getElementById('showCycles').checked,
+						title: document.getElementById('title').value,
+					},
+				};
+			}
+
+			window.applyConfig = function () {
+				if (wopr) {
+					wopr.destroy();
+				}
+
+				const config = getConfig();
+				const container = document.getElementById('app');
+				container.innerHTML = '';
+
+				wopr = new WOPRDecryptor({
+					container: container,
+					...config,
+				});
+
+				wopr.on('complete', (code) => {
+					console.log('✓ Code decrypted:', code);
+					// Auto-cycling is now handled by the cycles option internally
+				});
+
+				if (!config.ui.showOverlay) {
+					wopr.start();
+				}
+			};
+
+			window.resetConfig = function () {
+				// Reset to defaults
+				document.getElementById('codes').value = 'CPE-1704-TKS\nDEFCON-1\nNORAD-ALPHA-7';
+				document.getElementById('charsetSelect').value = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+				document.getElementById('direction').value = 'random';
+				document.getElementById('cycles').value = 0;
+				document.getElementById('durationMs').value = 10000;
+				document.getElementById('tickInterval').value = 70;
+				document.getElementById('startDateTime').value = '';
+				document.getElementById('endDateTime').value = '';
+				document.getElementById('audioEnabled').checked = true;
+				document.getElementById('audioVolume').value = 0.12;
+				document.getElementById('tickFreq').value = 180;
+				document.getElementById('lockFreqStart').value = 900;
+				document.getElementById('lockFreqStep').value = 12;
+				document.getElementById('showHeader').checked = true;
+				document.getElementById('showFooter').checked = true;
+				document.getElementById('showProgress').checked = true;
+				document.getElementById('showOverlay').checked = false;
+				document.getElementById('blinkOnSolved').checked = true;
+				document.getElementById('blinkDuration').value = 3;
+				document.getElementById('showCycles').checked = true;
+				document.getElementById('title').value = 'TARGET: LAUNCH CODES';
+				document.getElementById('probEnabled').checked = true;
+				document.getElementById('probBase').value = 2.3;
+				document.getElementById('probMax').value = 99.9;
+				document.getElementById('streamEnabled').checked = true;
+				document.getElementById('streamLines').value = 20;
+				document.getElementById('streamWidth').value = 22;
+				updateRangeValues();
+				applyConfig();
+			};
+
+			window.startDemo = function () {
+				if (wopr) wopr.start();
+			};
+
+			window.stopDemo = function () {
+				if (wopr) wopr.stop();
+			};
+
+			window.copyConfig = async function (event) {
+				const config = getConfig();
+				const configString = `new WOPRDecryptor(${JSON.stringify(
+					{ container: 'document.getElementById("app")', ...config },
+					null,
+					2
+				).replace('"document.getElementById(\\"app\\")"', 'document.getElementById("app")')})`;
+
+				try {
+					await navigator.clipboard.writeText(configString);
+					const btn = event.target;
+					const originalText = btn.textContent;
+					btn.textContent = '✓ COPIED!';
+					btn.classList.add('copied');
+					setTimeout(() => {
+						btn.textContent = originalText;
+						btn.classList.remove('copied');
+					}, 2000);
+				} catch (err) {
+					alert('Failed to copy: ' + err.message);
+				}
+			};
+
+			function updateRangeValues() {
+				const cyclesValue = document.getElementById('cycles').value;
+				document.getElementById('cyclesValue').textContent = cyclesValue === '0' ? '∞' : cyclesValue;
+				const blinkValue = document.getElementById('blinkDuration').value;
+				document.getElementById('blinkDurationValue').textContent = blinkValue === '0' ? '∞' : blinkValue;
+				document.getElementById('durationValue').textContent = document.getElementById('durationMs').value;
+				document.getElementById('tickValue').textContent = document.getElementById('tickInterval').value;
+				document.getElementById('volumeValue').textContent = document.getElementById('audioVolume').value;
+				document.getElementById('tickFreqValue').textContent = document.getElementById('tickFreq').value;
+				document.getElementById('lockFreqStartValue').textContent =
+					document.getElementById('lockFreqStart').value;
+				document.getElementById('lockFreqStepValue').textContent =
+					document.getElementById('lockFreqStep').value;
+				document.getElementById('probBaseValue').textContent = document.getElementById('probBase').value;
+				document.getElementById('probMaxValue').textContent = document.getElementById('probMax').value;
+				document.getElementById('streamLinesValue').textContent = document.getElementById('streamLines').value;
+				document.getElementById('streamWidthValue').textContent = document.getElementById('streamWidth').value;
+			}
+
+			// Update range value displays
+			document.querySelectorAll('input[type="range"]').forEach((input) => {
+				input.addEventListener('input', updateRangeValues);
+			});
+
+			// Initialize
+			updateRangeValues();
+			applyConfig();
+
+			// Keyboard shortcuts
+			window.addEventListener('keydown', (e) => {
+				if (e.key === 'r' || e.key === 'R') {
+					if (wopr) {
+						wopr.reset();
+						wopr.start();
+					}
+				}
+			});
+		</script>
+	</body>
+</html>

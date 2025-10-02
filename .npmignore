@@ -1,0 +1,25 @@
+# Source files (only ship dist)
+src/
+tsconfig.json
+
+# Development files
+.vscode/
+.prettierrc
+*.html
+test3.html
+
+# Config files
+.gitignore
+.env*
+
+# Documentation (except README)
+*.md
+!README.md
+
+# CI/CD
+.github/
+
+# Other
+node_modules/
+*.log
+.DS_Store

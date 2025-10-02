@@ -1,0 +1,65 @@
+{
+	"name": "wopr-decryptor",
+	"version": "1.0.0",
+	"description": "Retro WOPR-style decryption/countdown counter with customizable UI and timing.",
+	"type": "module",
+	"main": "./dist/index.js",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		},
+		"./styles.css": "./dist/styles.css"
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
+	"sideEffects": [
+		"dist/styles.css"
+	],
+	"scripts": {
+		"build": "tsup src/index.ts --format esm --dts --out-dir dist && node -e \"require('fs').copyFileSync('src/styles.css', 'dist/styles.css')\"",
+		"dev": "tsup src/index.ts --format esm --dts --watch",
+		"preview": "npm run build && npx serve -p 3000",
+		"clean": "rimraf dist",
+		"format": "npx prettier --write .",
+		"format:check": "npx prettier --check .",
+		"prepublishOnly": "npm run build"
+	},
+	"keywords": [
+		"wopr",
+		"wargames",
+		"decryptor",
+		"retro",
+		"crt",
+		"counter",
+		"countdown",
+		"animation",
+		"terminal",
+		"ui"
+	],
+	"author": "Phillip Beazley <phillip@beazley.org>",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/NomadicDaddy/wopr-decryptor.git"
+	},
+	"bugs": {
+		"url": "https://github.com/NomadicDaddy/wopr-decryptor/issues"
+	},
+	"homepage": "https://github.com/NomadicDaddy/wopr-decryptor#readme",
+	"devDependencies": {
+		"@trivago/prettier-plugin-sort-imports": "^5.2.2",
+		"prettier": "^3.6.2",
+		"prettier-plugin-organize-attributes": "^1.0.0",
+		"prettier-plugin-sort-json": "^4.1.1",
+		"prettier-plugin-tailwindcss": "^0.6.14",
+		"rimraf": "^6.0.1",
+		"tsup": "^8.5.0",
+		"typescript": "^5.9.3"
+	}
+}
