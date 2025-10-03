@@ -88,6 +88,7 @@ wopr.start();
 - **`ui.showFooter`**: Show footer with checksum
 - **`ui.showProgress`**: Show progress bar
 - **`ui.showOverlay`**: Show initial overlay button
+- **`ui.showBackground`**: Show retro background effects (default: true)
 - **`ui.blinkOnSolved`**: Blink effect when code is solved (default: false)
 - **`ui.blinkDuration`**: Duration of blink effect in seconds (0 = blink forever, default: 3)
 - **`ui.showCycles`**: Show cycles counter in UI (default: true)

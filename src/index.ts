@@ -27,6 +27,7 @@ export type UIOptions = {
 	showFooter?: boolean;
 	showProgress?: boolean;
 	showOverlay?: boolean;
+	showBackground?: boolean;
 	overlayText?: string;
 	title?: string;
 	blinkOnSolved?: boolean;
@@ -95,6 +96,7 @@ const DEFAULTS = {
 		showFooter: true,
 		showProgress: true,
 		showOverlay: false,
+		showBackground: true,
 		overlayText: 'INITIATE DECRYPTION',
 		title: 'TARGET: LAUNCH CODES',
 		blinkOnSolved: false,
@@ -122,6 +124,7 @@ export class WOPRDecryptor {
 	private streamWrap?: HTMLElement;
 	private checksumEl?: HTMLElement;
 	private overlayEl?: HTMLElement;
+	private bgToggleEl?: HTMLElement;
 
 	private ctx?: AudioContext;
 	private master?: GainNode;
@@ -157,6 +160,7 @@ export class WOPRDecryptor {
 
 		this.prepareCode(this.codes[this.codeIdx]);
 		this.render();
+		this.updateBackgroundVisibility(); // Initialize background visibility
 
 		if (o.ui.showOverlay) {
 			this.installOverlay(o.ui.overlayText || DEFAULTS.ui.overlayText);
@@ -217,6 +221,29 @@ export class WOPRDecryptor {
 		this.opts = this.mergeOptions({ ...this.opts, ...patch });
 		// Apply color overrides immediately
 		this.applyColors(this.opts.colors, this.root);
+		// Update background visibility
+		this.updateBackgroundVisibility();
+	}
+
+	// Public API for background toggle
+	toggleBackground() {
+		this.opts.ui.showBackground = !this.opts.ui.showBackground;
+		this.updateBackgroundVisibility();
+	}
+
+	private updateBackgroundVisibility() {
+		// Update CSS variables for background visibility
+		const enabled = this.opts.ui.showBackground ? 1 : 0;
+		this.root.style.setProperty('--wopr-bg-enabled', enabled.toString());
+		this.root.style.setProperty(
+			'--wopr-bg-gradient',
+			this.opts.ui.showBackground ? 'linear-gradient(var(--wopr-bg), #000)' : 'transparent'
+		);
+
+		// Update button text
+		if (this.bgToggleEl) {
+			this.bgToggleEl.textContent = this.opts.ui.showBackground ? '🎨 HIDE BG' : '🎨 SHOW BG';
+		}
 	}
 
 	destroy() {
@@ -294,7 +321,23 @@ export class WOPRDecryptor {
 			const left = this.el('div', '', 'WOPR // DECRYPTION ROUTINE ');
 			const sim = this.el('span', 'wopr-muted', '[ SIMULATION ]');
 			left.appendChild(sim);
+
+			// Add background toggle button
+			const bgToggle = this.el(
+				'button',
+				'wopr-btn wopr-bg-toggle',
+				o.ui.showBackground ? '🎨 HIDE BG' : '🎨 SHOW BG'
+			);
+			bgToggle.style.fontSize = '10px';
+			bgToggle.style.padding = '4px 8px';
+			bgToggle.style.marginRight = '8px';
+			bgToggle.addEventListener('click', () => {
+				this.toggleBackground();
+			});
+			this.bgToggleEl = bgToggle;
+
 			const right = this.el('div', '', 'NORAD PROCESSOR GRID');
+			right.insertBefore(bgToggle, right.firstChild);
 			header.appendChild(left);
 			header.appendChild(right);
 			this.root.appendChild(header);

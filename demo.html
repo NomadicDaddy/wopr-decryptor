@@ -281,6 +281,13 @@ NORAD-ALPHA-7</textarea
 
 					<div class="form-group">
 						<label>
+							<input id="showBackground" checked type="checkbox" />
+							SHOW BACKGROUND
+						</label>
+					</div>
+
+					<div class="form-group">
+						<label>
 							<input id="blinkOnSolved" checked type="checkbox" />
 							BLINK ON SOLVED
 						</label>
@@ -414,6 +421,7 @@ NORAD-ALPHA-7</textarea
 						showFooter: document.getElementById('showFooter').checked,
 						showProgress: document.getElementById('showProgress').checked,
 						showOverlay: document.getElementById('showOverlay').checked,
+						showBackground: document.getElementById('showBackground').checked,
 						blinkOnSolved: document.getElementById('blinkOnSolved').checked,
 						blinkDuration: parseFloat(document.getElementById('blinkDuration').value),
 						showCycles: document.getElementById('showCycles').checked,
@@ -465,6 +473,7 @@ NORAD-ALPHA-7</textarea
 				document.getElementById('showFooter').checked = true;
 				document.getElementById('showProgress').checked = true;
 				document.getElementById('showOverlay').checked = false;
+				document.getElementById('showBackground').checked = true;
 				document.getElementById('blinkOnSolved').checked = true;
 				document.getElementById('blinkDuration').value = 3;
 				document.getElementById('showCycles').checked = true;
