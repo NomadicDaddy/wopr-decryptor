@@ -1,6 +1,6 @@
 {
 	"name": "wopr-decryptor",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Retro WOPR-style decryption/countdown counter with customizable UI and timing.",
 	"type": "module",
 	"main": "./dist/index.js",
