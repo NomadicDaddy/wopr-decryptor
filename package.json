@@ -1,6 +1,6 @@
 {
 	"name": "wopr-decryptor",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"description": "Retro WOPR-style decryption/countdown counter with customizable UI and timing.",
 	"type": "module",
 	"main": "./dist/index.js",
@@ -28,7 +28,7 @@
 		"clean": "rimraf dist",
 		"format": "npx prettier --write .",
 		"format:check": "npx prettier --check .",
-		"prepublishOnly": "npm run build"
+		"prepublishOnly": "npm run format && npm run build"
 	},
 	"keywords": [
 		"wopr",

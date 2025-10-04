@@ -518,7 +518,7 @@ export class WOPRDecryptor {
 		}
 
 		// Locking progression
-		const toLock = Math.floor(progress * this.dynamicIdx.length);
+		const toLock = this.calculateDigitsToSolve();
 
 		for (let k = 0; k < toLock; k++) {
 			const orderIndex = this.lockOrder[k];
@@ -672,5 +672,37 @@ export class WOPRDecryptor {
 		if (!this.opts.audio.enabled) return;
 		const f = this.opts.audio.lockFreqStart! + k * this.opts.audio.lockFreqStep!;
 		this.beep(f, 50, this.opts.audio.type, 0.18);
+	}
+
+	private calculateDigitsToSolve(): number {
+		if (!this.opts.timing.startDateTime || !this.opts.timing.endDateTime) {
+			// Fallback to linear progress if dates aren't set
+			const elapsed = Date.now() - (this.startTs || Date.now());
+			const duration = this.opts.timing.durationMs || 12000; // Default fallback
+			const progress = clamp(elapsed / duration, 0, 1);
+			return Math.floor(progress * this.dynamicIdx.length);
+		}
+
+		const startDate =
+			this.opts.timing.startDateTime instanceof Date
+				? this.opts.timing.startDateTime
+				: new Date(this.opts.timing.startDateTime);
+		const endDate =
+			this.opts.timing.endDateTime instanceof Date
+				? this.opts.timing.endDateTime
+				: new Date(this.opts.timing.endDateTime);
+
+		const now = new Date();
+		const totalTime = endDate.getTime() - startDate.getTime();
+		const elapsedTime = now.getTime() - startDate.getTime();
+
+		// Clamp elapsed time to valid range
+		const validElapsed = Math.max(0, Math.min(elapsedTime, totalTime));
+		const timeProgress = validElapsed / totalTime;
+
+		// Calculate digits to solve based on time progress
+		// For a 30-day span with 10 digits, this gives us linear progression
+		const totalDigits = this.dynamicIdx.length;
+		return Math.floor(timeProgress * totalDigits);
 	}
 }
