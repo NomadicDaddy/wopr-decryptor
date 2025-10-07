@@ -34,7 +34,7 @@ import 'wopr-decryptor/dist/styles.css';
 
 const wopr = new WOPRDecryptor({
 	container: document.getElementById('app'),
-	codes: ['CPE-1704-TKS', 'DEFCON-1'],
+	codes: ['CPE1704TKS', 'DEFCON-1'],
 	direction: 'random', // 'ltr', 'rtl', or 'random'
 	cycles: 0, // 0 = infinite loop through codes
 	timing: {

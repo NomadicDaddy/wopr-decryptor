@@ -71,7 +71,7 @@ type ListenerMap = {
 const DEFAULT_CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
 const DEFAULTS = {
-	codes: ['CPE-1704-TKS'],
+	codes: ['CPE1704TKS'],
 	charset: DEFAULT_CHARSET,
 	direction: 'ltr' as const,
 	cycles: 0,
