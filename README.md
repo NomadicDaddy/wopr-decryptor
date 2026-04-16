@@ -30,7 +30,7 @@ npm i wopr-decryptor
 
 ```javascript
 import { WOPRDecryptor } from 'wopr-decryptor';
-import 'wopr-decryptor/dist/styles.css';
+import 'wopr-decryptor/styles.css';
 
 const wopr = new WOPRDecryptor({
 	container: document.getElementById('app'),
@@ -119,13 +119,16 @@ See `example.html` for a basic example and `demo.html` for an interactive config
 
 - **`start()`** - Start the decryption animation
 - **`stop()`** - Stop the animation
-- **`reset()`** - Reset to the first code
+- **`reset()`** - Reset the current code
 - **`next()`** - Move to the next code
 - **`destroy()`** - Clean up and remove all elements
 
 ### Events
 
 ```javascript
+wopr.on('progress', (progress) => {
+	/* Called when progress changes */
+});
 wopr.on('tick', () => {
 	/* Called on each character scramble */
 });

@@ -113,6 +113,12 @@ function pad(n: number, size: number) {
 	return String(n).padStart(size, '0');
 }
 
+function parseDateValue(value?: Date | string) {
+	if (!value) return undefined;
+	const date = value instanceof Date ? value : new Date(value);
+	return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
 export class WOPRDecryptor {
 	private opts: Required<WOPROptions>;
 	private listeners: Partial<ListenerMap> = {};
@@ -142,6 +148,7 @@ export class WOPRDecryptor {
 	private dynamicIdx: number[] = [];
 	private lockOrder: number[] = [];
 	private completedCycles = 0;
+	private restartTimer = 0;
 
 	constructor(userOptions: WOPROptions) {
 		if (!userOptions?.container) {
@@ -185,6 +192,7 @@ export class WOPRDecryptor {
 		this.running = true;
 		this.startTs = 0;
 		this.cycles = 0;
+		this._lastTick = 0;
 		this.raf = requestAnimationFrame((t) => this.loop(t));
 		this.resumeAudio();
 	}
@@ -192,37 +200,81 @@ export class WOPRDecryptor {
 	stop() {
 		this.running = false;
 		cancelAnimationFrame(this.raf);
+		if (this.restartTimer) {
+			window.clearTimeout(this.restartTimer);
+			this.restartTimer = 0;
+		}
 	}
 
 	reset() {
-		this.stop();
-		this.cycles = 0;
-		this.completedCycles = 0;
-		this.prepareCode(this.codes[this.codeIdx]);
-		this.updateHud(0);
-		this.render();
+		this.loadCurrentCode();
 	}
 
 	next(loop = true) {
-		this.codeIdx++;
-		if (this.codeIdx >= this.codes.length) {
-			this.codeIdx = loop ? 0 : this.codes.length - 1;
-		}
-		this.reset();
+		this.advanceCode(loop);
 	}
 
 	setCodes(codes: string[], reset = true) {
+		if (!codes.length) {
+			throw new Error('codes must contain at least one code');
+		}
 		this.codes = [...codes];
 		this.codeIdx = 0;
 		if (reset) this.reset();
 	}
 
 	setOptions(patch: Partial<WOPROptions>) {
-		this.opts = this.mergeOptions({ ...this.opts, ...patch });
+		const nextOptions: WOPROptions = {
+			container: patch.container ?? this.opts.container,
+			codes: patch.codes ?? this.opts.codes,
+			charset: patch.charset ?? this.opts.charset,
+			direction: patch.direction ?? this.opts.direction,
+			cycles: patch.cycles ?? this.opts.cycles,
+			colors: { ...this.opts.colors, ...(patch.colors || {}) },
+			audio: { ...this.opts.audio, ...(patch.audio || {}) },
+			probability: { ...this.opts.probability, ...(patch.probability || {}) },
+			stream: { ...this.opts.stream, ...(patch.stream || {}) },
+			ui: { ...this.opts.ui, ...(patch.ui || {}) },
+			timing: { ...this.opts.timing, ...(patch.timing || {}) },
+		};
+
+		this.opts = this.mergeOptions(nextOptions);
+		this.codes = [...this.opts.codes];
+		if (this.codeIdx >= this.codes.length) {
+			this.codeIdx = 0;
+		}
+
+		if (patch.codes || patch.charset || patch.direction || patch.timing) {
+			this.loadCurrentCode();
+		}
 		// Apply color overrides immediately
 		this.applyColors(this.opts.colors, this.root);
 		// Update background visibility
 		this.updateBackgroundVisibility();
+		if (this.master) {
+			this.master.gain.value = this.opts.audio.volume!;
+		}
+	}
+
+	private loadCurrentCode(resetCycleCount = true) {
+		this.stop();
+		this.cycles = 0;
+		this.startTs = 0;
+		this._lastTick = 0;
+		if (resetCycleCount) {
+			this.completedCycles = 0;
+		}
+		this.prepareCode(this.codes[this.codeIdx]);
+		this.updateHud(0);
+		this.render();
+	}
+
+	private advanceCode(loop = true, resetCycleCount = true) {
+		this.codeIdx++;
+		if (this.codeIdx >= this.codes.length) {
+			this.codeIdx = loop ? 0 : this.codes.length - 1;
+		}
+		this.loadCurrentCode(resetCycleCount);
 	}
 
 	// Public API for background toggle
@@ -266,18 +318,40 @@ export class WOPRDecryptor {
 		const timing = { ...DEFAULTS.timing, ...(o.timing || {}) };
 
 		// Calculate durationMs from startDateTime/endDateTime if provided
-		if (timing.endDateTime) {
-			const endDate = timing.endDateTime instanceof Date ? timing.endDateTime : new Date(timing.endDateTime);
-			const startDate = timing.startDateTime
-				? timing.startDateTime instanceof Date
-					? timing.startDateTime
-					: new Date(timing.startDateTime)
-				: new Date();
-			timing.durationMs = endDate.getTime() - startDate.getTime();
-			if (timing.durationMs <= 0) {
+		const startDate = parseDateValue(timing.startDateTime);
+		const endDate = parseDateValue(timing.endDateTime);
+
+		if (timing.startDateTime && !startDate) {
+			console.warn('Invalid startDateTime, ignoring scheduled start');
+			timing.startDateTime = undefined;
+		}
+
+		if (timing.endDateTime && !endDate) {
+			console.warn('Invalid endDateTime, using default duration');
+			timing.endDateTime = undefined;
+		}
+
+		if (endDate) {
+			const resolvedStartDate = startDate || new Date();
+			const durationMs = endDate.getTime() - resolvedStartDate.getTime();
+			if (durationMs <= 0) {
 				console.warn('endDateTime must be after startDateTime, using default duration');
+				timing.startDateTime = undefined;
+				timing.endDateTime = undefined;
 				timing.durationMs = DEFAULTS.timing.durationMs;
+			} else {
+				timing.startDateTime = resolvedStartDate;
+				timing.endDateTime = endDate;
+				timing.durationMs = durationMs;
 			}
+		}
+
+		if (!Number.isFinite(timing.durationMs) || timing.durationMs! <= 0) {
+			timing.durationMs = DEFAULTS.timing.durationMs;
+		}
+
+		if (!Number.isFinite(timing.tickInterval) || timing.tickInterval! <= 0) {
+			timing.tickInterval = DEFAULTS.timing.tickInterval;
 		}
 
 		return {
@@ -472,7 +546,10 @@ export class WOPRDecryptor {
 
 	private render() {
 		const s = this.state.join('');
-		this.codeEl.innerHTML = s + '<span class="wopr-cursor" aria-hidden="true"></span>';
+		this.codeEl.textContent = s;
+		const cursor = this.el('span', 'wopr-cursor');
+		cursor.setAttribute('aria-hidden', 'true');
+		this.codeEl.appendChild(cursor);
 		this.emit('render', s);
 	}
 
@@ -497,14 +574,29 @@ export class WOPRDecryptor {
 		if (this.checksumEl) this.checksumEl.textContent = this.checksum();
 	}
 
+	private calculateProgress(frameTs: number) {
+		const startDate = parseDateValue(this.opts.timing.startDateTime);
+		const endDate = parseDateValue(this.opts.timing.endDateTime);
+
+		if (startDate && endDate) {
+			const totalTime = endDate.getTime() - startDate.getTime();
+			if (totalTime > 0) {
+				return clamp((Date.now() - startDate.getTime()) / totalTime, 0, 1);
+			}
+		}
+
+		if (!this.startTs) this.startTs = frameTs;
+		const elapsed = frameTs - this.startTs;
+		return clamp(elapsed / this.opts.timing.durationMs!, 0, 1);
+	}
+
 	private loop(ts: number) {
 		if (!this.running) return;
-		if (!this.startTs) this.startTs = ts;
 
-		const { durationMs, tickInterval } = this.opts.timing;
-		const elapsed = ts - this.startTs;
-		const progress = clamp(elapsed / durationMs!, 0, 1);
+		const { tickInterval } = this.opts.timing;
+		const progress = this.calculateProgress(ts);
 		this.updateHud(progress);
+		this.emit('progress', progress);
 
 		// Character cycle tick
 		const shouldTick = !this._lastTick || ts - this._lastTick >= tickInterval!;
@@ -518,7 +610,7 @@ export class WOPRDecryptor {
 		}
 
 		// Locking progression
-		const toLock = this.calculateDigitsToSolve();
+		const toLock = this.calculateDigitsToSolve(progress);
 
 		for (let k = 0; k < toLock; k++) {
 			const orderIndex = this.lockOrder[k];
@@ -564,8 +656,9 @@ export class WOPRDecryptor {
 		const maxCycles = this.opts.cycles;
 		if (maxCycles === 0 || this.completedCycles < maxCycles) {
 			// Continue cycling
-			setTimeout(() => {
-				this.next();
+			this.restartTimer = window.setTimeout(() => {
+				this.restartTimer = 0;
+				this.advanceCode(true, false);
 				this.start();
 			}, 2000);
 		}
@@ -674,35 +767,7 @@ export class WOPRDecryptor {
 		this.beep(f, 50, this.opts.audio.type, 0.18);
 	}
 
-	private calculateDigitsToSolve(): number {
-		if (!this.opts.timing.startDateTime || !this.opts.timing.endDateTime) {
-			// Fallback to linear progress if dates aren't set
-			const elapsed = Date.now() - (this.startTs || Date.now());
-			const duration = this.opts.timing.durationMs || 12000; // Default fallback
-			const progress = clamp(elapsed / duration, 0, 1);
-			return Math.floor(progress * this.dynamicIdx.length);
-		}
-
-		const startDate =
-			this.opts.timing.startDateTime instanceof Date
-				? this.opts.timing.startDateTime
-				: new Date(this.opts.timing.startDateTime);
-		const endDate =
-			this.opts.timing.endDateTime instanceof Date
-				? this.opts.timing.endDateTime
-				: new Date(this.opts.timing.endDateTime);
-
-		const now = new Date();
-		const totalTime = endDate.getTime() - startDate.getTime();
-		const elapsedTime = now.getTime() - startDate.getTime();
-
-		// Clamp elapsed time to valid range
-		const validElapsed = Math.max(0, Math.min(elapsedTime, totalTime));
-		const timeProgress = validElapsed / totalTime;
-
-		// Calculate digits to solve based on time progress
-		// For a 30-day span with 10 digits, this gives us linear progression
-		const totalDigits = this.dynamicIdx.length;
-		return Math.floor(timeProgress * totalDigits);
+	private calculateDigitsToSolve(progress: number): number {
+		return Math.floor(clamp(progress, 0, 1) * this.dynamicIdx.length);
 	}
 }

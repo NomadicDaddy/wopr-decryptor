@@ -40,6 +40,11 @@ function clamp(n, a, b) {
 function pad(n, size) {
 	return String(n).padStart(size, '0');
 }
+function parseDateValue(value) {
+	if (!value) return void 0;
+	const date = value instanceof Date ? value : new Date(value);
+	return Number.isNaN(date.getTime()) ? void 0 : date;
+}
 var WOPRDecryptor = class {
 	opts;
 	listeners = {};
@@ -66,6 +71,7 @@ var WOPRDecryptor = class {
 	dynamicIdx = [];
 	lockOrder = [];
 	completedCycles = 0;
+	restartTimer = 0;
 	constructor(userOptions) {
 		if (!userOptions?.container) {
 			throw new Error('container is required');
@@ -99,37 +105,78 @@ var WOPRDecryptor = class {
 		this.running = true;
 		this.startTs = 0;
 		this.cycles = 0;
+		this._lastTick = 0;
 		this.raf = requestAnimationFrame((t) => this.loop(t));
 		this.resumeAudio();
 	}
 	stop() {
 		this.running = false;
 		cancelAnimationFrame(this.raf);
+		if (this.restartTimer) {
+			window.clearTimeout(this.restartTimer);
+			this.restartTimer = 0;
+		}
 	}
 	reset() {
-		this.stop();
-		this.cycles = 0;
-		this.completedCycles = 0;
-		this.prepareCode(this.codes[this.codeIdx]);
-		this.updateHud(0);
-		this.render();
+		this.loadCurrentCode();
 	}
 	next(loop = true) {
-		this.codeIdx++;
-		if (this.codeIdx >= this.codes.length) {
-			this.codeIdx = loop ? 0 : this.codes.length - 1;
-		}
-		this.reset();
+		this.advanceCode(loop);
 	}
 	setCodes(codes, reset = true) {
+		if (!codes.length) {
+			throw new Error('codes must contain at least one code');
+		}
 		this.codes = [...codes];
 		this.codeIdx = 0;
 		if (reset) this.reset();
 	}
 	setOptions(patch) {
-		this.opts = this.mergeOptions({ ...this.opts, ...patch });
+		const nextOptions = {
+			container: patch.container ?? this.opts.container,
+			codes: patch.codes ?? this.opts.codes,
+			charset: patch.charset ?? this.opts.charset,
+			direction: patch.direction ?? this.opts.direction,
+			cycles: patch.cycles ?? this.opts.cycles,
+			colors: { ...this.opts.colors, ...(patch.colors || {}) },
+			audio: { ...this.opts.audio, ...(patch.audio || {}) },
+			probability: { ...this.opts.probability, ...(patch.probability || {}) },
+			stream: { ...this.opts.stream, ...(patch.stream || {}) },
+			ui: { ...this.opts.ui, ...(patch.ui || {}) },
+			timing: { ...this.opts.timing, ...(patch.timing || {}) },
+		};
+		this.opts = this.mergeOptions(nextOptions);
+		this.codes = [...this.opts.codes];
+		if (this.codeIdx >= this.codes.length) {
+			this.codeIdx = 0;
+		}
+		if (patch.codes || patch.charset || patch.direction || patch.timing) {
+			this.loadCurrentCode();
+		}
 		this.applyColors(this.opts.colors, this.root);
 		this.updateBackgroundVisibility();
+		if (this.master) {
+			this.master.gain.value = this.opts.audio.volume;
+		}
+	}
+	loadCurrentCode(resetCycleCount = true) {
+		this.stop();
+		this.cycles = 0;
+		this.startTs = 0;
+		this._lastTick = 0;
+		if (resetCycleCount) {
+			this.completedCycles = 0;
+		}
+		this.prepareCode(this.codes[this.codeIdx]);
+		this.updateHud(0);
+		this.render();
+	}
+	advanceCode(loop = true, resetCycleCount = true) {
+		this.codeIdx++;
+		if (this.codeIdx >= this.codes.length) {
+			this.codeIdx = loop ? 0 : this.codes.length - 1;
+		}
+		this.loadCurrentCode(resetCycleCount);
 	}
 	// Public API for background toggle
 	toggleBackground() {
@@ -162,18 +209,35 @@ var WOPRDecryptor = class {
 	}
 	mergeOptions(o) {
 		const timing = { ...DEFAULTS.timing, ...(o.timing || {}) };
-		if (timing.endDateTime) {
-			const endDate = timing.endDateTime instanceof Date ? timing.endDateTime : new Date(timing.endDateTime);
-			const startDate = timing.startDateTime
-				? timing.startDateTime instanceof Date
-					? timing.startDateTime
-					: new Date(timing.startDateTime)
-				: /* @__PURE__ */ new Date();
-			timing.durationMs = endDate.getTime() - startDate.getTime();
-			if (timing.durationMs <= 0) {
+		const startDate = parseDateValue(timing.startDateTime);
+		const endDate = parseDateValue(timing.endDateTime);
+		if (timing.startDateTime && !startDate) {
+			console.warn('Invalid startDateTime, ignoring scheduled start');
+			timing.startDateTime = void 0;
+		}
+		if (timing.endDateTime && !endDate) {
+			console.warn('Invalid endDateTime, using default duration');
+			timing.endDateTime = void 0;
+		}
+		if (endDate) {
+			const resolvedStartDate = startDate || /* @__PURE__ */ new Date();
+			const durationMs = endDate.getTime() - resolvedStartDate.getTime();
+			if (durationMs <= 0) {
 				console.warn('endDateTime must be after startDateTime, using default duration');
+				timing.startDateTime = void 0;
+				timing.endDateTime = void 0;
 				timing.durationMs = DEFAULTS.timing.durationMs;
+			} else {
+				timing.startDateTime = resolvedStartDate;
+				timing.endDateTime = endDate;
+				timing.durationMs = durationMs;
 			}
+		}
+		if (!Number.isFinite(timing.durationMs) || timing.durationMs <= 0) {
+			timing.durationMs = DEFAULTS.timing.durationMs;
+		}
+		if (!Number.isFinite(timing.tickInterval) || timing.tickInterval <= 0) {
+			timing.tickInterval = DEFAULTS.timing.tickInterval;
 		}
 		return {
 			container: o.container,
@@ -340,7 +404,10 @@ var WOPRDecryptor = class {
 	}
 	render() {
 		const s = this.state.join('');
-		this.codeEl.innerHTML = s + '<span class="wopr-cursor" aria-hidden="true"></span>';
+		this.codeEl.textContent = s;
+		const cursor = this.el('span', 'wopr-cursor');
+		cursor.setAttribute('aria-hidden', 'true');
+		this.codeEl.appendChild(cursor);
 		this.emit('render', s);
 	}
 	fmtProb(p) {
@@ -361,13 +428,25 @@ var WOPRDecryptor = class {
 		if (this.cyclesEl) this.cyclesEl.textContent = pad(this.cycles, 6);
 		if (this.checksumEl) this.checksumEl.textContent = this.checksum();
 	}
+	calculateProgress(frameTs) {
+		const startDate = parseDateValue(this.opts.timing.startDateTime);
+		const endDate = parseDateValue(this.opts.timing.endDateTime);
+		if (startDate && endDate) {
+			const totalTime = endDate.getTime() - startDate.getTime();
+			if (totalTime > 0) {
+				return clamp((Date.now() - startDate.getTime()) / totalTime, 0, 1);
+			}
+		}
+		if (!this.startTs) this.startTs = frameTs;
+		const elapsed = frameTs - this.startTs;
+		return clamp(elapsed / this.opts.timing.durationMs, 0, 1);
+	}
 	loop(ts) {
 		if (!this.running) return;
-		if (!this.startTs) this.startTs = ts;
-		const { durationMs, tickInterval } = this.opts.timing;
-		const elapsed = ts - this.startTs;
-		const progress = clamp(elapsed / durationMs, 0, 1);
+		const { tickInterval } = this.opts.timing;
+		const progress = this.calculateProgress(ts);
 		this.updateHud(progress);
+		this.emit('progress', progress);
 		const shouldTick = !this._lastTick || ts - this._lastTick >= tickInterval;
 		if (shouldTick) {
 			this._lastTick = ts;
@@ -377,7 +456,7 @@ var WOPRDecryptor = class {
 			this.updateStream();
 			this.beepTick();
 		}
-		const toLock = this.calculateDigitsToSolve();
+		const toLock = this.calculateDigitsToSolve(progress);
 		for (let k = 0; k < toLock; k++) {
 			const orderIndex = this.lockOrder[k];
 			const idx = this.dynamicIdx[orderIndex];
@@ -411,8 +490,9 @@ var WOPRDecryptor = class {
 		this.emit('complete', this.codes[this.codeIdx]);
 		const maxCycles = this.opts.cycles;
 		if (maxCycles === 0 || this.completedCycles < maxCycles) {
-			setTimeout(() => {
-				this.next();
+			this.restartTimer = window.setTimeout(() => {
+				this.restartTimer = 0;
+				this.advanceCode(true, false);
 				this.start();
 			}, 2e3);
 		}
@@ -508,28 +588,8 @@ var WOPRDecryptor = class {
 		const f = this.opts.audio.lockFreqStart + k * this.opts.audio.lockFreqStep;
 		this.beep(f, 50, this.opts.audio.type, 0.18);
 	}
-	calculateDigitsToSolve() {
-		if (!this.opts.timing.startDateTime || !this.opts.timing.endDateTime) {
-			const elapsed = Date.now() - (this.startTs || Date.now());
-			const duration = this.opts.timing.durationMs || 12e3;
-			const progress = clamp(elapsed / duration, 0, 1);
-			return Math.floor(progress * this.dynamicIdx.length);
-		}
-		const startDate =
-			this.opts.timing.startDateTime instanceof Date
-				? this.opts.timing.startDateTime
-				: new Date(this.opts.timing.startDateTime);
-		const endDate =
-			this.opts.timing.endDateTime instanceof Date
-				? this.opts.timing.endDateTime
-				: new Date(this.opts.timing.endDateTime);
-		const now = /* @__PURE__ */ new Date();
-		const totalTime = endDate.getTime() - startDate.getTime();
-		const elapsedTime = now.getTime() - startDate.getTime();
-		const validElapsed = Math.max(0, Math.min(elapsedTime, totalTime));
-		const timeProgress = validElapsed / totalTime;
-		const totalDigits = this.dynamicIdx.length;
-		return Math.floor(timeProgress * totalDigits);
+	calculateDigitsToSolve(progress) {
+		return Math.floor(clamp(progress, 0, 1) * this.dynamicIdx.length);
 	}
 };
 export { WOPRDecryptor };

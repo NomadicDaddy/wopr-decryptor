@@ -218,6 +218,8 @@
 					},
 				});
 
+				let isRunning = true;
+
 				// Start immediately
 				wopr.start();
 
@@ -226,17 +228,21 @@
 					if (e.key === 'r' || e.key === 'R') {
 						wopr.reset();
 						wopr.start();
+						isRunning = true;
 					}
 					if (e.key === 'n' || e.key === 'N') {
 						wopr.next();
 						wopr.start();
+						isRunning = true;
 					}
 					if (e.key === ' ') {
 						e.preventDefault();
-						if (wopr.running) {
+						if (isRunning) {
 							wopr.stop();
+							isRunning = false;
 						} else {
 							wopr.start();
+							isRunning = true;
 						}
 					}
 				});
